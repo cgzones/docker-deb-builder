@@ -82,6 +82,10 @@ cd "${CDEBB_BUILD_DIR}/source"
 log "Installing build dependencies"
 mk-build-deps -ir -t "apt-get -o Debug::pkgProblemResolver=yes -y --no-install-recommends"
 
+# dovecot_2.3.20+dfsg1.orig.tar.gz
+name="$(dpkg-parsechangelog -S Source)_$(dpkg-parsechangelog -S Version | sed -e 's/-[^-]*$//' | sed -e 's/^[0-9]*://').orig.tar.gz"
+tar --create --file "../${name}" --gzip --preserve-permissions --exclude './debian' --exclude './.git' .
+
 # Build packages
 log "Building package with DEB_BUILD_OPTIONS set to '${DEB_BUILD_OPTIONS:-}'"
 debuild_args=
@@ -101,6 +105,24 @@ else
     runuser -u build-runner -- env PATH="/usr/lib/ccache:$PATH" dpkg-buildpackage -rfakeroot -b --no-sign -sa ${debuild_args} 2>&1 | tee "${CDEBB_BUILD_DIR}/build.log"
 fi
 log "Build completed in $((EPOCHSECONDS - BUILD_START_TIME)) seconds"
+
+#runuser -u build-runner -- dpkg-source --before-build .
+#runuser -u build-runner -- dpkg-buildpackage --sanitize-env -us -uc -rfakeroot -sa --source-option=--format='3.0 (native)'
+
+if [ -n "${BUILD_TWICE+x}" ]; then
+    log "Building package the second time"
+    BUILD_START_TIME="$EPOCHSECONDS"
+    # supported since Debian 12 (bookworm)
+    if unshare --map-users 1,1,100 --help &> /dev/null; then
+        # shellcheck disable=SC2086
+        unshare --user --map-root-user --net --map-users 1,1,100 --map-users 65534,65534,1 --map-groups 1,1,100 --map-groups 65534,65534,1 --setuid "$(id -u build-runner)" --setgid "$(id -g build-runner)" -- env PATH="/usr/lib/ccache:$PATH" dpkg-buildpackage -rfakeroot -b --no-sign -sa ${debuild_args} 2>&1 | tee "${CDEBB_BUILD_DIR}/build.log"
+    else
+        log "unshare(1) does not support --map-users, falling back to runuser(1); build has network access"
+        # shellcheck disable=SC2086
+        runuser -u build-runner -- env PATH="/usr/lib/ccache:$PATH" dpkg-buildpackage -rfakeroot -b --no-sign -sa ${debuild_args} 2>&1 | tee "${CDEBB_BUILD_DIR}/build.log"
+    fi
+    log "Second build completed in $((EPOCHSECONDS - BUILD_START_TIME)) seconds"
+fi
 
 cd /
 
