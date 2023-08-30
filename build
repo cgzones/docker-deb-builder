@@ -134,7 +134,7 @@ elif [ -n "${HOME+x}" ]; then
 else
     cache_dir=$(eval echo "~$(id -un)")/.cache
 fi
-cache_dir="$cache_dir/docker-deb-builder"
+cache_dir="$cache_dir/container-deb-builder"
 
 log "Using cache directory '$cache_dir'."
 
