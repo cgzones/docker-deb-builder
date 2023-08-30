@@ -1,25 +1,34 @@
-
-# Creating Debian packages in Docker container
+# Creating Debian packages in container
 
 ## Overview
 
-Docker can be used to set up a clean build environment for Debian
-packaging.  This tutorial shows how to create a container with
-required build tools and how to use it to build packages.
+Container engines, in particular docker and podman, can be used for Debian
+packaging. Building inside a container avoids installing build dependencies on
+the host, ensures a clean and reproducible environment, and in case of podman
+allows to perform the build as unprivileged user.
+
+Fork of [docker-deb-builder](https://github.com/tsaarni/docker-deb-builder),
+created by Tero Saarni.
 
 ## Create build environment
 
-Start by building a container that will act as package build environment:
+The build environment is setup in advance by creating a container image to
+speed up builds. It only contains essential build dependencies, like gcc, thus
+one can be used to build different Debian packages. For each distribution a
+separate build environment needs to be created.
 
-    docker build -t docker-deb-builder:17.04 -f Dockerfile-ubuntu-17.04 .
+In this example the target is Ubuntu 22.04 and Debian sid, other distributions
+can be created by their respective Dockerfile:
 
-In this example the target is Ubuntu 17.04 but you can create and
-modify `Dockerfile-nnn` to match your target environment.
+    docker build -t container-deb-builder:22.04 -f Dockerfile-ubuntu-22.04 .
+    podman build -t container-deb-builder:sid -f Dockerfile-Debian-sid-unstable .
+
+The image name (`container-deb-builder:22.04`) is later used while building a
+Debian package.
 
 ## Building packages
 
-First download or git clone the source code of the package you are
-building:
+First download or git clone the source code of the package to build:
 
     git clone ... ~/my-package-source
 
@@ -27,17 +36,17 @@ The source code should contain subdirectory called `debian` with at
 least a minimum set of packaging files: `control`, `copyright`,
 `changelog` and `rules`.
 
-Clone the
-[docker-deb-builder](https://github.com/tsaarni/docker-deb-builder)
-(the repository you are reading now) and run the build script to see
-usage:
+Run the build script to see its usage:
 
-    $ ./build
+    $ ./build -h
     usage: build [options...] SOURCEDIR
     Options:
-      -i IMAGE  Name of the docker image (including tag) to use as package build environment.
-      -o DIR    Destination directory to store packages to.
-      -d DIR    Directory that contains other deb packages that need to be installed before build.
+      -i IMAGE     Name of the docker image (including tag) to use as package build environment.
+      -o DIR       Destination directory to store packages to.
+      -d DIR       Directory that contains other deb packages that need to be installed before build.
+      -p profiles  Specify the profiles to build (e.g. nocheck). Takes a comma separated list.
+      -C           Use ccache to cache compiled objects.
+      -L           Run Lintian after a successful build.
 
 To build Debian packages run following commands:
 
@@ -45,26 +54,20 @@ To build Debian packages run following commands:
     mkdir output
 
     # build package from source directory
-    ./build -i docker-deb-builder:17.04 -o output ~/my-package-source
+    ./build -i container-deb-builder:22.04 -o output ~/my-package-source
 
-After successful build you will find the `.deb` files in `output`
-directory.
+After a successful build the build results will be copied from the container
+into the `output` directory. The container itself is discarded.
 
-Sometimes build might require dependencies that cannot be installed with
-`apt-get build-dep`.  You can install them into the build environment
-by passing option `-d DIR` where DIR is a directory with `*.deb` files
-in it.
+Sometimes builds might require dependencies that cannot be installed with
+`apt-get build-dep`, e.g. when the required version of the dependency is not
+yet available.  Those can be installed into the build environment by passing
+the option `-d DIR`, where *DIR* is a directory with `*.deb` files in it.
 
-    ./build -i docker-deb-builder:17.04 -o output -d dependencies ~/my-package-source
+    ./build -i container-deb-builder:22.04 -o output -d dependencies ~/my-package-source
 
-## Integrating with CI
+## Limitations
 
-In this tutorial all package-specific build dependencies are installed
-from scratch each time build is executed in the container.  The
-benefit is that the container is generic and reusable for building any
-package but the installation of build-time dependencies can add up to
-considerable overhead, both in time and bandwidth.  This overhead may
-not be acceptable when building packages as part of continuous
-integration pipeline.  One possible solution to reduce overhead is to
-install package-specific build dependencies into build environment
-container.
+* Since the package specific build dependencies are installed into the
+  container at runtime, the container, and therefore the build process, has
+  network access.
