@@ -46,6 +46,7 @@ if [ -n "${USE_CCACHE+x}" ]; then
     log "Setting up ccache"
     apt-get install -y --no-install-recommends ccache
     export CCACHE_DIR=/ccache_dir
+    ccache --zero-stats
 fi
 
 # Make read-write copy of source code
