@@ -41,18 +41,22 @@ if [ -d /dependencies ]; then
     apt-get -f install -y --no-install-recommends
 fi
 
+adduser --system --no-create-home build-runner
+
 # Install ccache
 if [ -n "${USE_CCACHE+x}" ]; then
     log "Setting up ccache"
     apt-get install -y --no-install-recommends ccache
     export CCACHE_DIR=/ccache_dir
     ccache --zero-stats
+    chown -R --preserve-root build-runner: /ccache_dir
 fi
 
 # Make read-write copy of source code
 log "Copying source directory"
-mkdir -p /build
+mkdir /build
 cp -a /source-ro /build/source
+chown -R --preserve-root build-runner: /build
 cd /build/source
 
 # Install build dependencies
@@ -61,7 +65,7 @@ mk-build-deps -ir -t "apt-get -o Debug::pkgProblemResolver=yes -y --no-install-r
 
 # Build packages
 log "Building package"
-debuild --prepend-path /usr/lib/ccache --preserve-envvar CCACHE_DIR -b -uc -us --sanitize-env -sa
+runuser -u build-runner -- debuild --prepend-path /usr/lib/ccache --preserve-envvar CCACHE_DIR -uc -us --sanitize-env -rfakeroot -b -sa
 
 if [ -n "${USE_CCACHE+x}" ]; then
     log "ccache statistics"
@@ -82,7 +86,9 @@ fi
 
 # Copy packages to output dir with user's permissions
 if [ -n "${USER+x}" ] && [ -n "${GROUP+x}" ]; then
-    chown -R "${USER}:${GROUP}" /build
+    chown "${USER}:${GROUP}" /build/*.deb /build/*.buildinfo /build/*.changes
+else
+    chown root:root /build/*.deb /build/*.buildinfo /build/*.changes
 fi
 cp -a /build/*.deb /build/*.buildinfo /build/*.changes /output/
 ls -l -A --color=auto -h /output
