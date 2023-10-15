@@ -124,7 +124,9 @@ docker_args+="--mount type=tmpfs,tmpfs-size=4G,destination=/tmp "
 docker_args+="--rm "
 
 # pass build profiles to use
-docker_args+="--env DEB_BUILD_PROFILES=$profiles --env DEB_BUILD_OPTIONS=$profiles "
+if [[ "$profiles" ]]; then
+    docker_args+="--env DEB_BUILD_PROFILES=$profiles --env DEB_BUILD_OPTIONS=$profiles "
+fi
 
 # Compute a private cache directory
 if [ -n "${XDG_CACHE_HOME+x}" ]; then
