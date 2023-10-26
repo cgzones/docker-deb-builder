@@ -128,28 +128,14 @@ if [[ "$profiles" ]]; then
     docker_args+="--env DEB_BUILD_PROFILES=$profiles --env DEB_BUILD_OPTIONS=$profiles "
 fi
 
-# Compute a private cache directory
-if [ -n "${XDG_CACHE_HOME+x}" ]; then
-    cache_dir=$XDG_CACHE_HOME
-elif [ -n "${HOME+x}" ]; then
-    cache_dir=$HOME/.cache
-else
-    cache_dir=$(eval echo "~$(id -un)")/.cache
-fi
-cache_dir="$cache_dir/container-deb-builder"
-
-log "Using cache directory '$cache_dir'."
+sanitized_image_name=$(sanitize_string "$image")
 
 # share apt package cache
-apt_cache_dir="$cache_dir/$(sanitize_string "$image")/apt"
-mkdir -p "$apt_cache_dir"
-docker_args+="-v $(abspath "$apt_cache_dir"):/var/cache/apt/archives "
+docker_args+="-v cdebb__${sanitized_image_name}__apt:/var/cache/apt/archives "
 
 # pass whether to use ccache
 if [[ "$use_ccache" ]]; then
-    ccache_dir="$cache_dir/ccache"
-    mkdir -p "$ccache_dir"
-    docker_args+="--env USE_CCACHE=1 -v $(abspath "$ccache_dir"):/ccache_dir "
+    docker_args+="--env USE_CCACHE=1 -v cdebb__${sanitized_image_name}__ccache:/ccache_dir "
 fi
 
 # pass whether to run Lintian

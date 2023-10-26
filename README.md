@@ -93,6 +93,12 @@ image is used multiple times).
 
 Building packages then works just by using the particular images.
 
+## Maintenance
+
+The data for apt archives and ccache is stored in volumes. These volumes have
+the naming scheme `cdebb__${ImageName}__(apt|ccache)` and can be removed if
+the respective image does no longer exists or the disk space is needed.
+
 ## Limitations
 
 * Since the package specific build dependencies are installed into the
