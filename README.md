@@ -66,6 +66,33 @@ the option `-d DIR`, where *DIR* is a directory with `*.deb` files in it.
 
     ./build -i container-deb-builder:22.04 -o output -d dependencies ~/my-package-source
 
+### Native builds for foreign architectures
+
+By default all packages are build for the architecture the host is running on.
+Docker and Podman however support running containers under a foreign
+architecture via QEMU. This emulation is quite slower than standard cross-
+compiling but enables native builds, which for example includes running tests.
+
+First install the required system packages:
+
+    apt install binfmt-support qemu-user-static
+
+Distinct images needs to be build for each architecture via the flag
+`--platform`, e.g. for arm64:
+
+    podman build -t container-deb-builder-arm64:sid -f Dockerfile-Debian-bookworm-12 --platform arm64 .
+
+---
+**Note**:
+
+Podman remembers the last architecture used for a local image, so be sure to
+specify the correct platform for further usage (especially if the name of the
+image is used multiple times).
+
+---
+
+Building packages then works just by using the particular images.
+
 ## Limitations
 
 * Since the package specific build dependencies are installed into the
