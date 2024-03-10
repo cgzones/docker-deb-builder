@@ -27,6 +27,7 @@ Options:
   -p profiles  Specify the profiles to build (e.g. nocheck). Takes a comma separated list.
   -C           Use ccache to cache compiled objects.
   -L           Run Lintian after a successful build.
+  -B           Run blhc after a successful build.
 EOF
     exit 1
 }
@@ -51,7 +52,7 @@ function sanitize_string {
 
 [[ $# -eq 0 ]] && usage
 
-while getopts "i:o:p:d:hCL" opt; do
+while getopts "i:o:p:d:hBCL" opt; do
     case $opt in
         i)
             image="$OPTARG"
@@ -64,6 +65,9 @@ while getopts "i:o:p:d:hCL" opt; do
             ;;
         d)
             depdir="$OPTARG"
+            ;;
+        B)
+            run_blhc=1
             ;;
         C)
             use_ccache=1
@@ -141,6 +145,11 @@ fi
 # pass whether to run Lintian
 if [[ "$run_lintian" ]]; then
     docker_args+="--env RUN_LINTIAN=1 "
+fi
+
+# pass whether to run blhc
+if [[ "$run_blhc" ]]; then
+    docker_args+="--env RUN_BLHC=1 "
 fi
 
 # disable any selinux stuff while using rh and derivates with podman

@@ -65,7 +65,7 @@ mk-build-deps -ir -t "apt-get -o Debug::pkgProblemResolver=yes -y --no-install-r
 
 # Build packages
 log "Building package"
-runuser -u build-runner -- debuild --prepend-path /usr/lib/ccache --preserve-envvar CCACHE_DIR -uc -us --sanitize-env -rfakeroot -b -sa
+runuser -u build-runner -- debuild --prepend-path /usr/lib/ccache --preserve-envvar CCACHE_DIR -uc -us --sanitize-env -rfakeroot -b -sa | tee ../build.log
 
 if [ -n "${USE_CCACHE+x}" ]; then
     log "ccache statistics"
@@ -82,6 +82,15 @@ if [ -n "${RUN_LINTIAN+x}" ]; then
     log "+++ Lintian Report Start +++"
     runuser -u lintian-runner -- lintian --display-experimental --info --display-info --pedantic --tag-display-limit 0 --color auto --verbose --fail-on none /build/*.changes
     log "+++ Lintian Report End +++"
+fi
+
+# Run blhc
+if [ -n "${RUN_BLHC+x}" ]; then
+    log "Running blhc"
+    apt-get install -y --no-install-recommends blhc
+    log "+++ blhc Report Start +++"
+    blhc --all --color /build/build.log
+    log "+++ blhc Report End +++"
 fi
 
 # Copy packages to output dir with user's permissions
