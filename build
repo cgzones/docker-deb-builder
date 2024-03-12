@@ -28,6 +28,7 @@ Options:
   -C           Use ccache to cache compiled objects.
   -L           Run Lintian after a successful build.
   -B           Run blhc after a successful build.
+  -t           Reset file modification timestamps to changelog entry.
 EOF
     exit 1
 }
@@ -52,7 +53,7 @@ function sanitize_string {
 
 [[ $# -eq 0 ]] && usage
 
-while getopts "i:o:p:d:hBCL" opt; do
+while getopts "i:o:p:d:htBCL" opt; do
     case $opt in
         i)
             image="$OPTARG"
@@ -65,6 +66,9 @@ while getopts "i:o:p:d:hBCL" opt; do
             ;;
         d)
             depdir="$OPTARG"
+            ;;
+        t)
+            reset_timestamps=1
             ;;
         B)
             run_blhc=1
@@ -153,6 +157,11 @@ fi
 # pass whether to run blhc
 if [[ "$run_blhc" ]]; then
     docker_args+="--env RUN_BLHC=1 "
+fi
+
+# pass whether to reset timestamps
+if [[ "$reset_timestamps" ]]; then
+    docker_args+="--env RESET_TIMESTAMPS=1 "
 fi
 
 # disable any selinux stuff while using rh and derivates with podman

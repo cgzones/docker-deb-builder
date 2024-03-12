@@ -57,6 +57,14 @@ log "Copying source directory"
 mkdir /build
 cp -a /source-ro /build/source
 chown -R --preserve-root build-runner: /build
+
+# Reset timestamps
+if [ -n "${RESET_TIMESTAMPS+x}" ]; then
+    log "Resetting timestamps"
+    SOURCE_DATE_RFC2822=$(dpkg-parsechangelog --file /build/source/debian/changelog --show-field Date)
+    find /build/source -exec touch -m --no-dereference --date="${SOURCE_DATE_RFC2822}" {} +;
+fi
+
 cd /build/source
 
 # Install build dependencies
