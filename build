@@ -126,9 +126,9 @@ docker_args+="--mount type=tmpfs,tmpfs-size=4G,destination=/tmp "
 # Pass current UID and GID to container, so that it can change the
 # ownership of output files which are otherwise written to outdir as
 # root
-UID=$(id -u)
-GID=$(id -g)
-[[ ! "$tool_version" =~ "podman" ]] && docker_args+="-e USER=${UID} -e GROUP=${GID} "
+CURR_UID=$(id -u)
+CURR_GID=$(id -g)
+[[ ! "$tool_version" =~ "podman" ]] && docker_args+="-e USER=${CURR_UID} -e GROUP=${CURR_GID} "
 
 # Comment following out if you want to keep container after execution
 # for debugging
