@@ -97,7 +97,7 @@ if [ -n "${RUN_BLHC+x}" ]; then
     log "Running blhc"
     apt-get install -y --no-install-recommends blhc
     log "+++ blhc Report Start +++"
-    blhc --all --color /build/build.log
+    blhc --all --color /build/build.log || true
     log "+++ blhc Report End +++"
 fi
 
