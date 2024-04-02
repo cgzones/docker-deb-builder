@@ -80,7 +80,7 @@ mk-build-deps -ir -t "apt-get -o Debug::pkgProblemResolver=yes -y --no-install-r
 # Build packages
 log "Building package with DEB_BUILD_OPTIONS set to '${DEB_BUILD_OPTIONS:-}'"
 BUILD_START_TIME="$EPOCHSECONDS"
-runuser -u build-runner -- debuild --prepend-path /usr/lib/ccache --preserve-envvar CCACHE_DIR --sanitize-env -rfakeroot -b --no-sign -sa | tee ../build.log
+runuser -u build-runner -- debuild --prepend-path /usr/lib/ccache --preserve-envvar CCACHE_DIR --sanitize-env -rfakeroot -b --no-sign -sa | tee /build/build.log
 log "Build completed in $((EPOCHSECONDS - BUILD_START_TIME)) seconds"
 
 if [ -n "${USE_CCACHE+x}" ]; then
@@ -96,7 +96,7 @@ if [ -n "${RUN_LINTIAN+x}" ]; then
     apt-get install -y --no-install-recommends lintian
     adduser --system --no-create-home lintian-runner
     log "+++ Lintian Report Start +++"
-    runuser -u lintian-runner -- lintian --display-experimental --info --display-info --pedantic --tag-display-limit 0 --color always --verbose --fail-on none /build/*.changes
+    runuser -u lintian-runner -- lintian --display-experimental --info --display-info --pedantic --tag-display-limit 0 --color always --verbose --fail-on none /build/*.changes | tee /build/lintian.log
     log "+++ Lintian Report End +++"
 fi
 
@@ -105,17 +105,20 @@ if [ -n "${RUN_BLHC+x}" ]; then
     log "Installing blhc"
     apt-get install -y --no-install-recommends blhc
     log "+++ blhc Report Start +++"
-    blhc --all --color /build/build.log || true
+    blhc --all --color /build/build.log | tee /build/blhc.log || true
     log "+++ blhc Report End +++"
 fi
 
+# Drop color escape sequences from logs
+sed -e 's/\x1b\[[0-9;]*[mK]//g' --in-place=.color /build/*.log
+
 # Copy packages to output dir with user's permissions
 if [ -n "${USER+x}" ] && [ -n "${GROUP+x}" ]; then
-    chown "${USER}:${GROUP}" /build/*.deb /build/*.buildinfo /build/*.changes
+    chown "${USER}:${GROUP}" /build/*.deb /build/*.buildinfo /build/*.changes /build/*.log /build/*.log.color
 else
-    chown root:root /build/*.deb /build/*.buildinfo /build/*.changes
+    chown root:root /build/*.deb /build/*.buildinfo /build/*.changes /build/*.log /build/*.log.color
 fi
-cp -a /build/*.deb /build/*.buildinfo /build/*.changes /output/
-ls -l --almost-all --color=always --human-readable /output
+cp -a /build/*.deb /build/*.buildinfo /build/*.changes /build/*.log /build/*.log.color /output/
+ls -l --almost-all --color=always --human-readable --ignore={*.log,*.log.color} /output
 
 log "Finished in $((EPOCHSECONDS - CONTAINER_START_TIME)) seconds"
