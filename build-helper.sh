@@ -23,6 +23,10 @@ function log {
 # Remove directory owned by _apt
 trap "rm -rf /var/cache/apt/archives/partial" EXIT
 
+# force colors from dh and dpkg
+export DH_COLORS="always"
+export DPKG_COLORS="always"
+
 log "Updating image"
 apt-get update
 apt-get upgrade -y --no-install-recommends
@@ -88,7 +92,7 @@ if [ -n "${RUN_LINTIAN+x}" ]; then
     apt-get install -y --no-install-recommends lintian
     adduser --system --no-create-home lintian-runner
     log "+++ Lintian Report Start +++"
-    runuser -u lintian-runner -- lintian --display-experimental --info --display-info --pedantic --tag-display-limit 0 --color auto --verbose --fail-on none /build/*.changes
+    runuser -u lintian-runner -- lintian --display-experimental --info --display-info --pedantic --tag-display-limit 0 --color always --verbose --fail-on none /build/*.changes
     log "+++ Lintian Report End +++"
 fi
 
@@ -108,6 +112,6 @@ else
     chown root:root /build/*.deb /build/*.buildinfo /build/*.changes
 fi
 cp -a /build/*.deb /build/*.buildinfo /build/*.changes /output/
-ls -l --almost-all --color=auto --human-readable /output
+ls -l --almost-all --color=always --human-readable /output
 
 log "Finished"
