@@ -48,6 +48,8 @@ Run the build script to see its usage:
       -p profiles  Specify the profiles to build (e.g. nocheck). Takes a comma separated list.
       -C           Use ccache to cache compiled objects.
       -L           Run Lintian after a successful build.
+      -B           Run blhc after a successful build.
+      -t           Reset file modification timestamps to changelog entry.
 
 To build Debian packages run following commands:
 
