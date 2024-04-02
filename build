@@ -126,7 +126,8 @@ docker_args="--interactive --tty "
 
 # Check that optional parameters are valid
 if [[ "$depdir" ]]; then
-    [[ ! -d "$depdir" ]] && fatal "dependency directory given but does not exist: $depdir"
+    [[ ! -e "$depdir" ]] && fatal "dependency directory given but does not exist: $depdir"
+    [[ ! -d "$depdir" ]] && fatal "dependency directory given but is not a directory: $depdir"
     docker_args+="-v $(abspath "$depdir"):/dependencies:ro "
 fi
 
