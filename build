@@ -22,6 +22,7 @@ function usage {
 usage: $PROG [options...] SOURCEDIR
 Options:
   -i IMAGE     Name of the docker image (including tag) to use as package build environment.
+  -c PROGRAM   Use a custom conainer engine.
   -o DIR       Destination directory to store packages to.
   -d DIR       Directory that contains other deb packages that need to be installed before build.
   -p profiles  Specify the profiles to build (e.g. nocheck). Takes a comma separated list.
@@ -53,8 +54,11 @@ function sanitize_string {
 
 [[ $# -eq 0 ]] && usage
 
-while getopts "i:o:p:d:htBCL" opt; do
+while getopts "c:i:o:p:d:htBCL" opt; do
     case $opt in
+        c)
+            tool="$OPTARG"
+            ;;
         i)
             image="$OPTARG"
             ;;
@@ -94,13 +98,21 @@ shift
 extra_args=("$@")
 [[ $# -ne 0 ]] && fatal "invalid trailing command line argument(s): ${extra_args[*]}"
 
-if command -v podman >/dev/null 2>&1; then
-    tool=podman
-elif command -v docker >/dev/null 2>&1; then
-    tool=docker
-else
-    fatal "neither podman nor docker found"
+if [[ ! "$tool" ]]; then
+    if command -v podman >/dev/null 2>&1; then
+        tool='podman'
+    elif command -v docker >/dev/null 2>&1; then
+        tool='docker'
+    elif command -v distrobox-host-exec >/dev/null 2>&1; then
+        if distrobox-host-exec podman --version >/dev/null 2>&1; then
+            tool='distrobox-host-exec podman'
+        elif distrobox-host-exec docker --version >/dev/null 2>&1; then
+            tool='distrobox-host-exec docker'
+        fi
+    fi
 fi
+
+[[ ! "$tool" ]] && fatal "neither podman nor docker found"
 tool_version=$($tool --version)
 
 docker_args="-it "
@@ -169,7 +181,7 @@ fi
 
 cmd="$tool run $docker_args $image /build-helper.sh"
 
-log "Running $tool:"
+log "Running '$tool':"
 log "$cmd"
 
 exec $cmd

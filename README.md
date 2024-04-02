@@ -42,6 +42,7 @@ Run the build script to see its usage:
     usage: build [options...] SOURCEDIR
     Options:
       -i IMAGE     Name of the docker image (including tag) to use as package build environment.
+      -c PROGRAM   Use a custom conainer engine.
       -o DIR       Destination directory to store packages to.
       -d DIR       Directory that contains other deb packages that need to be installed before build.
       -p profiles  Specify the profiles to build (e.g. nocheck). Takes a comma separated list.
