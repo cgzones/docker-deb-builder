@@ -115,7 +115,7 @@ fi
 [[ ! "$tool" ]] && fatal "neither podman nor docker found"
 tool_version=$($tool --version)
 
-docker_args="-it "
+docker_args="--interactive --tty "
 
 # Check that mandatory parameters are valid
 [[ !    "$outdir"        ]] && fatal "output directory was not given (-o DIR)"
@@ -130,9 +130,9 @@ if [[ "$depdir" ]]; then
     docker_args+="-v $(abspath "$depdir"):/dependencies:ro "
 fi
 
-docker_args+="-v $(abspath "$srcdir"):/source-ro:ro "
-docker_args+="-v $(abspath "$outdir"):/output "
-docker_args+="-v $(cd "$PROG_DIR"; pwd)/build-helper.sh:/build-helper.sh:ro "
+docker_args+="--volume $(abspath "$srcdir"):/source-ro:ro "
+docker_args+="--volume $(abspath "$outdir"):/output "
+docker_args+="--volume $(cd "$PROG_DIR"; pwd)/build-helper.sh:/build-helper.sh:ro "
 docker_args+="--mount type=tmpfs,tmpfs-size=4G,destination=/tmp "
 
 # Pass current UID and GID to container, so that it can change the
@@ -140,7 +140,7 @@ docker_args+="--mount type=tmpfs,tmpfs-size=4G,destination=/tmp "
 # root
 CURR_UID=$(id -u)
 CURR_GID=$(id -g)
-[[ ! "$tool_version" =~ "podman" ]] && docker_args+="-e USER=${CURR_UID} -e GROUP=${CURR_GID} "
+[[ "$tool_version" =~ "Docker" ]] && docker_args+="--env USER=${CURR_UID} --env GROUP=${CURR_GID} "
 
 # Comment following out if you want to keep container after execution
 # for debugging
@@ -154,11 +154,11 @@ fi
 sanitized_image_name=$(sanitize_string "$image")
 
 # share apt package cache
-docker_args+="-v cdebb__${sanitized_image_name}__apt:/var/cache/apt/archives "
+docker_args+="--volume cdebb__${sanitized_image_name}__apt:/var/cache/apt/archives "
 
 # pass whether to use ccache
 if [[ "$use_ccache" ]]; then
-    docker_args+="--env USE_CCACHE=1 -v cdebb__${sanitized_image_name}__ccache:/ccache_dir "
+    docker_args+="--env USE_CCACHE=1 --volume cdebb__${sanitized_image_name}__ccache:/ccache_dir "
 fi
 
 # pass whether to run Lintian

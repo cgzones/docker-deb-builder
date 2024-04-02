@@ -73,7 +73,7 @@ mk-build-deps -ir -t "apt-get -o Debug::pkgProblemResolver=yes -y --no-install-r
 
 # Build packages
 log "Building package"
-runuser -u build-runner -- debuild --prepend-path /usr/lib/ccache --preserve-envvar CCACHE_DIR -uc -us --sanitize-env -rfakeroot -b -sa | tee ../build.log
+runuser -u build-runner -- debuild --prepend-path /usr/lib/ccache --preserve-envvar CCACHE_DIR --sanitize-env -rfakeroot -b --no-sign -sa | tee ../build.log
 
 if [ -n "${USE_CCACHE+x}" ]; then
     log "ccache statistics"
@@ -108,6 +108,6 @@ else
     chown root:root /build/*.deb /build/*.buildinfo /build/*.changes
 fi
 cp -a /build/*.deb /build/*.buildinfo /build/*.changes /output/
-ls -l -A --color=auto -h /output
+ls -l --almost-all --color=auto --human-readable /output
 
 log "Finished"
