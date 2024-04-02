@@ -17,7 +17,7 @@ else
 fi
 
 function log {
-    echo -e "[${Blue}*${Reset}] $1"
+    echo -e "${Blue}[*] $1${Reset}"
 }
 
 # Remove directory owned by _apt

@@ -6,15 +6,17 @@ PROG=$(basename "$0")
 PROG_DIR=$(dirname "$0")
 
 if [ -t 0 ] && [ -t 1 ]; then
+    Red='\033[0;31m'
     Cyan='\033[0;36m'
     Reset='\033[0m'
 else
+    Red=
     Cyan=
     Reset=
 fi
 
 function log {
-    echo -e "[${Cyan}+${Reset}] $1"
+    echo -e "${Cyan}[+] $1${Reset}"
 }
 
 function usage {
@@ -35,7 +37,7 @@ EOF
 }
 
 function fatal {
-    echo "$PROG: ${1:-"Unknown Error"}" 1>&2
+    echo -e "${Red}$PROG: ${1:-"Unknown Error"}${Reset}" 1>&2
     exit 1
 }
 
