@@ -8,6 +8,8 @@ set -euo pipefail
 # successful build.  These directories are mounted as docker volumes to
 # allow files to be exchanged between the host and the container.
 
+CONTAINER_START_TIME="$EPOCHSECONDS"
+
 if [ -t 0 ] && [ -t 1 ]; then
     Blue='\033[0;34m'
     Reset='\033[0m'
@@ -27,7 +29,7 @@ trap "rm -rf /var/cache/apt/archives/partial" EXIT
 export DH_COLORS="always"
 export DPKG_COLORS="always"
 
-log "Updating image"
+log "Updating container"
 apt-get update
 apt-get upgrade -y --no-install-recommends
 apt-mark minimize-manual -y
@@ -40,7 +42,7 @@ apt-get autoclean
 #   Note: dpkg can fail due to dependencies, ignore errors, and use
 #   apt-get to install those afterwards
 if [ -d /dependencies ]; then
-    log "Installing dependencies"
+    log "Installing extra dependencies"
     dpkg -i /dependencies/*.deb
     apt-get -f install -y --no-install-recommends
 fi
@@ -76,19 +78,21 @@ log "Installing build dependencies"
 mk-build-deps -ir -t "apt-get -o Debug::pkgProblemResolver=yes -y --no-install-recommends"
 
 # Build packages
-log "Building package"
+log "Building package with DEB_BUILD_OPTIONS set to '${DEB_BUILD_OPTIONS:-}'"
+BUILD_START_TIME="$EPOCHSECONDS"
 runuser -u build-runner -- debuild --prepend-path /usr/lib/ccache --preserve-envvar CCACHE_DIR --sanitize-env -rfakeroot -b --no-sign -sa | tee ../build.log
+log "Build completed in $((EPOCHSECONDS - BUILD_START_TIME)) seconds"
 
 if [ -n "${USE_CCACHE+x}" ]; then
     log "ccache statistics"
-    ccache --show-stats
+    ccache --show-stats --verbose
 fi
 
 cd /
 
 # Run Lintian
 if [ -n "${RUN_LINTIAN+x}" ]; then
-    log "Running Lintian"
+    log "Installing Lintian"
     apt-get install -y --no-install-recommends lintian
     adduser --system --no-create-home lintian-runner
     log "+++ Lintian Report Start +++"
@@ -98,7 +102,7 @@ fi
 
 # Run blhc
 if [ -n "${RUN_BLHC+x}" ]; then
-    log "Running blhc"
+    log "Installing blhc"
     apt-get install -y --no-install-recommends blhc
     log "+++ blhc Report Start +++"
     blhc --all --color /build/build.log || true
@@ -114,4 +118,4 @@ fi
 cp -a /build/*.deb /build/*.buildinfo /build/*.changes /output/
 ls -l --almost-all --color=always --human-readable /output
 
-log "Finished"
+log "Finished in $((EPOCHSECONDS - CONTAINER_START_TIME)) seconds"
