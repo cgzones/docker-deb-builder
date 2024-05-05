@@ -85,7 +85,13 @@ mk-build-deps -ir -t "apt-get -o Debug::pkgProblemResolver=yes -y --no-install-r
 # Build packages
 log "Building package with DEB_BUILD_OPTIONS set to '${DEB_BUILD_OPTIONS:-}'"
 BUILD_START_TIME="$EPOCHSECONDS"
-runuser -u build-runner -- debuild --prepend-path /usr/lib/ccache --preserve-envvar CCACHE_DIR --sanitize-env -rfakeroot -b --no-sign -sa | tee "${CDEBB_BUILD_DIR}/build.log"
+# supported since Debian 12 (bookworm)
+if unshare --map-users 1,1,100 --help &> /dev/null; then
+    unshare --user --map-root-user --net --map-users 1,1,100 --map-users 65534,65534,1 --map-groups 1,1,100 --map-groups 65534,65534,1 --setuid "$(id -u build-runner)" --setgid "$(id -g build-runner)" -- debuild --prepend-path /usr/lib/ccache --preserve-envvar CCACHE_DIR --sanitize-env -rfakeroot -b --no-sign -sa | tee "${CDEBB_BUILD_DIR}/build.log"
+else
+    log "unshare(1) does not support --map-users, falling back to runuser(1); build has network access"
+    runuser -u build-runner -- debuild --prepend-path /usr/lib/ccache --preserve-envvar CCACHE_DIR --sanitize-env -rfakeroot -b --no-sign -sa | tee "${CDEBB_BUILD_DIR}/build.log"
+fi
 log "Build completed in $((EPOCHSECONDS - BUILD_START_TIME)) seconds"
 
 cd /
