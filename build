@@ -124,7 +124,7 @@ fi
 [[ ! "$tool" ]] && fatal "neither podman nor docker found"
 tool_version=$($tool --version)
 
-docker_args="--interactive --tty "
+tool_args="--interactive --tty "
 
 # Check that mandatory parameters are valid
 [[ !    "$outdir"        ]] && fatal "output directory was not given (-o DIR)"
@@ -137,59 +137,59 @@ docker_args="--interactive --tty "
 if [[ "$depdir" ]]; then
     [[ ! -e "$depdir" ]] && fatal "dependency directory ${UnderlineON}${depdir}${UnderlineOFF} given but does not exist"
     [[ ! -d "$depdir" ]] && fatal "dependency directory ${UnderlineON}${depdir}${UnderlineOFF} given but is not a directory"
-    docker_args+="--volume $(abspath "$depdir"):/dependencies:ro "
+    tool_args+="--volume $(abspath "$depdir"):/dependencies:ro "
 fi
 
-docker_args+="--volume $(abspath "$srcdir"):/source-ro:ro "
-docker_args+="--volume $(abspath "$outdir"):/output "
-docker_args+="--volume $(cd "$PROG_DIR"; pwd)/build-helper.sh:/build-helper.sh:ro "
-docker_args+="--mount type=tmpfs,tmpfs-size=4G,destination=/tmp "
+tool_args+="--volume $(abspath "$srcdir"):/source-ro:ro "
+tool_args+="--volume $(abspath "$outdir"):/output "
+tool_args+="--volume $(cd "$PROG_DIR"; pwd)/build-helper.sh:/build-helper.sh:ro "
+tool_args+="--mount type=tmpfs,tmpfs-size=4G,destination=/tmp "
 
 # Pass current UID and GID to container, so that it can change the
 # ownership of output files which are otherwise written to outdir as
 # root
 CURR_UID=$(id -u)
 CURR_GID=$(id -g)
-[[ "$tool_version" =~ "Docker" ]] && docker_args+="--env USER=${CURR_UID} --env GROUP=${CURR_GID} "
+[[ "$tool_version" =~ "Docker" ]] && tool_args+="--env USER=${CURR_UID} --env GROUP=${CURR_GID} "
 
 # Comment following out if you want to keep container after execution
 # for debugging
-docker_args+="--rm "
+tool_args+="--rm "
 
 # pass build profiles to use
 if [[ "$profiles" ]]; then
-    docker_args+="--env DEB_BUILD_PROFILES=$profiles --env DEB_BUILD_OPTIONS=$profiles "
+    tool_args+="--env DEB_BUILD_PROFILES=$profiles --env DEB_BUILD_OPTIONS=$profiles "
 fi
 
 sanitized_image_name=$(sanitize_string "$image")
 
 # share apt package cache
-docker_args+="--volume cdebb__${sanitized_image_name}__apt:/var/cache/apt/archives "
+tool_args+="--volume cdebb__${sanitized_image_name}__apt:/var/cache/apt/archives "
 
 # pass whether to use ccache
 if [[ "$use_ccache" ]]; then
-    docker_args+="--env USE_CCACHE=1 --volume cdebb__${sanitized_image_name}__ccache:/ccache_dir "
+    tool_args+="--env USE_CCACHE=1 --volume cdebb__${sanitized_image_name}__ccache:/ccache_dir "
 fi
 
 # pass whether to run Lintian
 if [[ "$run_lintian" ]]; then
-    docker_args+="--env RUN_LINTIAN=1 "
+    tool_args+="--env RUN_LINTIAN=1 "
 fi
 
 # pass whether to run blhc
 if [[ "$run_blhc" ]]; then
-    docker_args+="--env RUN_BLHC=1 "
+    tool_args+="--env RUN_BLHC=1 "
 fi
 
 # pass whether to reset timestamps
 if [[ "$reset_timestamps" ]]; then
-    docker_args+="--env RESET_TIMESTAMPS=1 "
+    tool_args+="--env RESET_TIMESTAMPS=1 "
 fi
 
 # disable any selinux stuff while using rh and derivates with podman
-[[ "$tool_version" =~ "podman" ]] && docker_args+="--security-opt label=disable "
+[[ "$tool_version" =~ "podman" ]] && tool_args+="--security-opt label=disable "
 
-cmd="$tool run $docker_args $image /build-helper.sh"
+cmd="$tool run $tool_args $image /build-helper.sh"
 
 log "Running '$tool':"
 log "$cmd"
