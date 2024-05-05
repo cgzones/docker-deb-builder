@@ -32,6 +32,8 @@ export DPKG_COLORS="always"
 log "Updating container"
 apt-get update
 apt-get upgrade -y --no-install-recommends
+
+log "Checking for obsolete packages"
 apt-mark minimize-manual -y
 apt-get autoremove -y
 
@@ -124,6 +126,8 @@ else
     chown root:root /build/*.deb /build/*.buildinfo /build/*.changes /build/*.log /build/*.log.color
 fi
 cp -a /build/*.deb /build/*.buildinfo /build/*.changes /build/*.log /build/*.log.color /output/
+
+log "Generated files:"
 ls -l --almost-all --color=always --human-readable --ignore={*.log,*.log.color} /output
 
 log "Finished in $((EPOCHSECONDS - CONTAINER_START_TIME)) seconds"
