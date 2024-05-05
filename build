@@ -8,10 +8,16 @@ PROG_DIR=$(dirname "$0")
 if [ -t 0 ] && [ -t 1 ]; then
     Red='\033[0;31m'
     Cyan='\033[0;36m'
+    UnderlineON='\033[4m'
+    UnderlineOFF='\033[24m'
+    Bold='\033[1m'
     Reset='\033[0m'
 else
     Red=
     Cyan=
+    UnderlineON='`'
+    UnderlineOFF='`'
+    Bold=
     Reset=
 fi
 
@@ -37,7 +43,7 @@ EOF
 }
 
 function fatal {
-    echo -e "${Red}$PROG: ${1:-"Unknown Error"}${Reset}" 1>&2
+    echo -e "${Red}[!]${Reset} ${Bold}$PROG${Reset}: ${Red}${1:-"Unknown Error"}${Reset}" 1>&2
     exit 1
 }
 
@@ -121,15 +127,15 @@ docker_args="--interactive --tty "
 
 # Check that mandatory parameters are valid
 [[ !    "$outdir"        ]] && fatal "output directory was not given (-o DIR)"
-[[ ! -d "$outdir"        ]] && fatal "output directory does not exist: $outdir"
+[[ ! -d "$outdir"        ]] && fatal "output directory ${UnderlineON}${outdir}${UnderlineOFF} does not exist"
 [[ !    "$srcdir"        ]] && fatal "source directory not given"
-[[ ! -r "$srcdir/debian" ]] && fatal "source directory does not contain debian sub directory"
+[[ ! -r "$srcdir/debian" ]] && fatal "source directory ${UnderlineON}${srcdir}${UnderlineOFF} does not contain debian sub directory"
 [[ !    "$image"         ]] && fatal "docker image name not given (-i IMAGE)"
 
 # Check that optional parameters are valid
 if [[ "$depdir" ]]; then
-    [[ ! -e "$depdir" ]] && fatal "dependency directory given but does not exist: $depdir"
-    [[ ! -d "$depdir" ]] && fatal "dependency directory given but is not a directory: $depdir"
+    [[ ! -e "$depdir" ]] && fatal "dependency directory ${UnderlineON}${depdir}${UnderlineOFF} given but does not exist"
+    [[ ! -d "$depdir" ]] && fatal "dependency directory ${UnderlineON}${depdir}${UnderlineOFF} given but is not a directory"
     docker_args+="-v $(abspath "$depdir"):/dependencies:ro "
 fi
 
