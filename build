@@ -101,6 +101,7 @@ while getopts "c:i:o:p:d:htBCL" opt; do
 done
 
 shift $((OPTIND - 1))
+[[ $# -eq 0 ]] && fatal "source directory not specified"
 srcdir=$1
 shift
 extra_args=("$@")
