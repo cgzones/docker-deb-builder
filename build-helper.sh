@@ -85,7 +85,12 @@ log "Build completed in $((EPOCHSECONDS - BUILD_START_TIME)) seconds"
 
 if [ -n "${USE_CCACHE+x}" ]; then
     log "ccache statistics"
-    ccache --show-stats --verbose
+    # supported since Debian 12 (bookworm)
+    if ccache --verbose --help &> /dev/null; then
+        ccache --show-stats --verbose
+    else
+        ccache --show-stats
+    fi
 fi
 
 cd /
