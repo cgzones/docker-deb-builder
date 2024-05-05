@@ -5,6 +5,8 @@ set -eo pipefail
 PROG=$(basename "$0")
 PROG_DIR=$(dirname "$0")
 
+CDEBB_DIR='/opt/cdebb'
+
 if [ -t 0 ] && [ -t 1 ]; then
     Red='\033[0;31m'
     Cyan='\033[0;36m'
@@ -137,12 +139,12 @@ tool_args="--interactive --tty "
 if [[ "$depdir" ]]; then
     [[ ! -e "$depdir" ]] && fatal "dependency directory ${UnderlineON}${depdir}${UnderlineOFF} given but does not exist"
     [[ ! -d "$depdir" ]] && fatal "dependency directory ${UnderlineON}${depdir}${UnderlineOFF} given but is not a directory"
-    tool_args+="--volume $(abspath "$depdir"):/dependencies:ro "
+    tool_args+="--volume $(abspath "$depdir"):${CDEBB_DIR}/dependencies:ro "
 fi
 
-tool_args+="--volume $(abspath "$srcdir"):/source-ro:ro "
-tool_args+="--volume $(abspath "$outdir"):/output "
-tool_args+="--volume $(cd "$PROG_DIR"; pwd)/build-helper.sh:/build-helper.sh:ro "
+tool_args+="--volume $(abspath "$srcdir"):${CDEBB_DIR}/source-ro:ro "
+tool_args+="--volume $(abspath "$outdir"):${CDEBB_DIR}/output "
+tool_args+="--volume $(abspath "$PROG_DIR")/build-helper.sh:${CDEBB_DIR}/build-helper.sh:ro "
 tool_args+="--mount type=tmpfs,tmpfs-size=4G,destination=/tmp "
 
 # Pass current UID and GID to container, so that it can change the
@@ -168,7 +170,7 @@ tool_args+="--volume cdebb__${sanitized_image_name}__apt:/var/cache/apt/archives
 
 # pass whether to use ccache
 if [[ "$use_ccache" ]]; then
-    tool_args+="--env USE_CCACHE=1 --volume cdebb__${sanitized_image_name}__ccache:/ccache_dir "
+    tool_args+="--env USE_CCACHE=1 --volume cdebb__${sanitized_image_name}__ccache:${CDEBB_DIR}/ccache_dir "
 fi
 
 # pass whether to run Lintian
@@ -189,7 +191,7 @@ fi
 # disable any selinux stuff while using rh and derivates with podman
 [[ "$tool_version" =~ "podman" ]] && tool_args+="--security-opt label=disable "
 
-cmd="$tool run $tool_args $image /build-helper.sh"
+cmd="$tool run $tool_args $image /bin/bash ${CDEBB_DIR}/build-helper.sh"
 
 log "Running '$tool':"
 log "$cmd"

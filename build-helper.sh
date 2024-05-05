@@ -8,7 +8,8 @@ set -euo pipefail
 # successful build.  These directories are mounted as docker volumes to
 # allow files to be exchanged between the host and the container.
 
-CONTAINER_START_TIME="$EPOCHSECONDS"
+CDEBB_DIR='/opt/cdebb'
+CDEBB_BUILD_DIR="${CDEBB_DIR}/build"
 
 if [ -t 0 ] && [ -t 1 ]; then
     Blue='\033[0;34m'
@@ -21,6 +22,8 @@ fi
 function log {
     echo -e "${Blue}[*] $1${Reset}"
 }
+
+CONTAINER_START_TIME="$EPOCHSECONDS"
 
 # Remove directory owned by _apt
 trap "rm -rf /var/cache/apt/archives/partial" EXIT
@@ -43,9 +46,9 @@ apt-get autoclean
 # Install extra dependencies that were provided for the build (if any)
 #   Note: dpkg can fail due to dependencies, ignore errors, and use
 #   apt-get to install those afterwards
-if [ -d /dependencies ]; then
+if [ -d "${CDEBB_DIR}/dependencies" ]; then
     log "Installing extra dependencies"
-    dpkg -i /dependencies/*.deb
+    dpkg -i "${CDEBB_DIR}/dependencies"/*.deb
     apt-get -f install -y --no-install-recommends
 fi
 
@@ -55,25 +58,25 @@ adduser --system --no-create-home build-runner
 if [ -n "${USE_CCACHE+x}" ]; then
     log "Setting up ccache"
     apt-get install -y --no-install-recommends ccache
-    export CCACHE_DIR=/ccache_dir
+    export CCACHE_DIR="${CDEBB_DIR}/ccache_dir"
     ccache --zero-stats
-    chown -R --preserve-root build-runner: /ccache_dir
+    chown -R --preserve-root build-runner: "${CDEBB_DIR}/ccache_dir"
 fi
 
 # Make read-write copy of source code
 log "Copying source directory"
-mkdir /build
-cp -a /source-ro /build/source
-chown -R --preserve-root build-runner: /build
+mkdir "${CDEBB_BUILD_DIR}"
+cp -a "${CDEBB_DIR}/source-ro" "${CDEBB_BUILD_DIR}/source"
+chown -R --preserve-root build-runner: "${CDEBB_BUILD_DIR}"
 
 # Reset timestamps
 if [ -n "${RESET_TIMESTAMPS+x}" ]; then
     log "Resetting timestamps"
-    SOURCE_DATE_RFC2822=$(dpkg-parsechangelog --file /build/source/debian/changelog --show-field Date)
-    find /build/source -exec touch -m --no-dereference --date="${SOURCE_DATE_RFC2822}" {} +;
+    SOURCE_DATE_RFC2822=$(dpkg-parsechangelog --file "${CDEBB_BUILD_DIR}/source/debian/changelog" --show-field Date)
+    find "${CDEBB_BUILD_DIR}/source" -exec touch -m --no-dereference --date="${SOURCE_DATE_RFC2822}" {} +;
 fi
 
-cd /build/source
+cd "${CDEBB_BUILD_DIR}/source"
 
 # Install build dependencies
 log "Installing build dependencies"
@@ -82,8 +85,10 @@ mk-build-deps -ir -t "apt-get -o Debug::pkgProblemResolver=yes -y --no-install-r
 # Build packages
 log "Building package with DEB_BUILD_OPTIONS set to '${DEB_BUILD_OPTIONS:-}'"
 BUILD_START_TIME="$EPOCHSECONDS"
-runuser -u build-runner -- debuild --prepend-path /usr/lib/ccache --preserve-envvar CCACHE_DIR --sanitize-env -rfakeroot -b --no-sign -sa | tee /build/build.log
+runuser -u build-runner -- debuild --prepend-path /usr/lib/ccache --preserve-envvar CCACHE_DIR --sanitize-env -rfakeroot -b --no-sign -sa | tee "${CDEBB_BUILD_DIR}/build.log"
 log "Build completed in $((EPOCHSECONDS - BUILD_START_TIME)) seconds"
+
+cd /
 
 if [ -n "${USE_CCACHE+x}" ]; then
     log "ccache statistics"
@@ -95,15 +100,13 @@ if [ -n "${USE_CCACHE+x}" ]; then
     fi
 fi
 
-cd /
-
 # Run Lintian
 if [ -n "${RUN_LINTIAN+x}" ]; then
     log "Installing Lintian"
     apt-get install -y --no-install-recommends lintian
     adduser --system --no-create-home lintian-runner
     log "+++ Lintian Report Start +++"
-    runuser -u lintian-runner -- lintian --display-experimental --info --display-info --pedantic --tag-display-limit 0 --color always --verbose --fail-on none /build/*.changes | tee /build/lintian.log
+    runuser -u lintian-runner -- lintian --display-experimental --info --display-info --pedantic --tag-display-limit 0 --color always --verbose --fail-on none "${CDEBB_BUILD_DIR}"/*.changes | tee "${CDEBB_BUILD_DIR}/lintian.log"
     log "+++ Lintian Report End +++"
 fi
 
@@ -112,22 +115,23 @@ if [ -n "${RUN_BLHC+x}" ]; then
     log "Installing blhc"
     apt-get install -y --no-install-recommends blhc
     log "+++ blhc Report Start +++"
-    blhc --all --color /build/build.log | tee /build/blhc.log || true
+    blhc --all --color "${CDEBB_BUILD_DIR}/build.log" | tee "${CDEBB_BUILD_DIR}/blhc.log" || true
     log "+++ blhc Report End +++"
 fi
 
 # Drop color escape sequences from logs
-sed -e 's/\x1b\[[0-9;]*[mK]//g' --in-place=.color /build/*.log
+cd "${CDEBB_BUILD_DIR}"
+sed -e 's/\x1b\[[0-9;]*[mK]//g' --in-place=.color -- *.log
 
 # Copy packages to output dir with user's permissions
 if [ -n "${USER+x}" ] && [ -n "${GROUP+x}" ]; then
-    chown "${USER}:${GROUP}" /build/*.deb /build/*.buildinfo /build/*.changes /build/*.log /build/*.log.color
+    chown "${USER}:${GROUP}" -- *.deb *.buildinfo *.changes *.log *.log.color
 else
-    chown root:root /build/*.deb /build/*.buildinfo /build/*.changes /build/*.log /build/*.log.color
+    chown root:root -- *.deb *.buildinfo *.changes *.log *.log.color
 fi
-cp -a /build/*.deb /build/*.buildinfo /build/*.changes /build/*.log /build/*.log.color /output/
+cp -a -- *.deb *.buildinfo *.changes *.log *.log.color "${CDEBB_DIR}/output/"
 
 log "Generated files:"
-ls -l --almost-all --color=always --human-readable --ignore={*.log,*.log.color} /output
+ls -l --almost-all --color=always --human-readable --ignore={*.log,*.log.color} "${CDEBB_DIR}/output"
 
 log "Finished in $((EPOCHSECONDS - CONTAINER_START_TIME)) seconds"
