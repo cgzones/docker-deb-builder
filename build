@@ -137,7 +137,7 @@ docker_args="--interactive --tty "
 if [[ "$depdir" ]]; then
     [[ ! -e "$depdir" ]] && fatal "dependency directory ${UnderlineON}${depdir}${UnderlineOFF} given but does not exist"
     [[ ! -d "$depdir" ]] && fatal "dependency directory ${UnderlineON}${depdir}${UnderlineOFF} given but is not a directory"
-    docker_args+="-v $(abspath "$depdir"):/dependencies:ro "
+    docker_args+="--volume $(abspath "$depdir"):/dependencies:ro "
 fi
 
 docker_args+="--volume $(abspath "$srcdir"):/source-ro:ro "
