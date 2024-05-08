@@ -121,7 +121,7 @@ if [ -n "${RUN_LINTIAN+x}" ]; then
     adduser --system --no-create-home lintian-runner
     log "+++ Lintian Report Start +++"
     # supported since Debian 11 (bullseye)
-    if lintian --help | grep -F -w -- '\b--fail-on\b' &> /dev/null; then
+    if lintian --help | grep -w -- '--fail-on\b' &> /dev/null; then
         runuser -u lintian-runner -- lintian --display-experimental --info --display-info --pedantic --tag-display-limit 0 --color always --verbose --fail-on none "${CDEBB_BUILD_DIR}"/*.changes | tee "${CDEBB_BUILD_DIR}/lintian.log"
     else
         runuser -u lintian-runner -- lintian --display-experimental --info --display-info --pedantic --tag-display-limit 0 --color always --verbose "${CDEBB_BUILD_DIR}"/*.changes | tee "${CDEBB_BUILD_DIR}/lintian.log"
