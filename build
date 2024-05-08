@@ -191,6 +191,9 @@ fi
 # disable any selinux stuff while using rh and derivates with podman
 [[ "$tool_version" =~ "podman" ]] && tool_args+="--security-opt label=disable "
 
+# run in RAM
+[[ "$tool_version" =~ "podman" ]] && tool_args+="--image-volume=tmpfs "
+
 cmd="$tool run $tool_args $image /bin/bash ${CDEBB_DIR}/build-helper.sh"
 
 log "Running '$tool':"
