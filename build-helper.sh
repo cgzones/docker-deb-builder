@@ -94,11 +94,11 @@ BUILD_START_TIME="$EPOCHSECONDS"
 # supported since Debian 12 (bookworm)
 if unshare --map-users 1,1,100 --help &> /dev/null; then
     # shellcheck disable=SC2086
-    unshare --user --map-root-user --net --map-users 1,1,100 --map-users 65534,65534,1 --map-groups 1,1,100 --map-groups 65534,65534,1 --setuid "$(id -u build-runner)" --setgid "$(id -g build-runner)" -- debuild --prepend-path /usr/lib/ccache --preserve-envvar CCACHE_DIR -rfakeroot -b --no-sign -sa ${debuild_args} | tee "${CDEBB_BUILD_DIR}/build.log"
+    unshare --user --map-root-user --net --map-users 1,1,100 --map-users 65534,65534,1 --map-groups 1,1,100 --map-groups 65534,65534,1 --setuid "$(id -u build-runner)" --setgid "$(id -g build-runner)" -- env PATH="/usr/lib/ccache:$PATH" dpkg-buildpackage -rfakeroot -b --no-sign -sa ${debuild_args} | tee "${CDEBB_BUILD_DIR}/build.log"
 else
     log "unshare(1) does not support --map-users, falling back to runuser(1); build has network access"
     # shellcheck disable=SC2086
-    runuser -u build-runner -- debuild --prepend-path /usr/lib/ccache --preserve-envvar CCACHE_DIR -rfakeroot -b --no-sign -sa ${debuild_args} | tee "${CDEBB_BUILD_DIR}/build.log"
+    runuser -u build-runner -- env PATH="/usr/lib/ccache:$PATH" dpkg-buildpackage -rfakeroot -b --no-sign -sa ${debuild_args} | tee "${CDEBB_BUILD_DIR}/build.log"
 fi
 log "Build completed in $((EPOCHSECONDS - BUILD_START_TIME)) seconds"
 
@@ -129,6 +129,10 @@ if [ -n "${RUN_LINTIAN+x}" ]; then
     log "+++ Lintian Report End +++"
 fi
 
+# Drop color escape sequences from logs
+cd "${CDEBB_BUILD_DIR}"
+sed -E -e 's/\x1b\[[0-9;]+[mK]//g' --in-place=.color -- *.log
+
 # Run blhc
 if [ -n "${RUN_BLHC+x}" ]; then
     log "Installing blhc"
@@ -136,11 +140,8 @@ if [ -n "${RUN_BLHC+x}" ]; then
     log "+++ blhc Report Start +++"
     blhc --all --color "${CDEBB_BUILD_DIR}/build.log" | tee "${CDEBB_BUILD_DIR}/blhc.log" || true
     log "+++ blhc Report End +++"
+    sed -E -e 's/\x1b\[[0-9;]+[mK]//g' --in-place=.color "${CDEBB_BUILD_DIR}/blhc.log"
 fi
-
-# Drop color escape sequences from logs
-cd "${CDEBB_BUILD_DIR}"
-sed -e 's/\x1b\[[0-9;]*[mK]//g' --in-place=.color -- *.log
 
 # Copy packages to output dir with user's permissions
 if [ -n "${USER+x}" ] && [ -n "${GROUP+x}" ]; then
