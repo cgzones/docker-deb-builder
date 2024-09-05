@@ -67,30 +67,39 @@ function sanitize_string {
 while getopts "c:i:o:p:d:htBCL" opt; do
     case $opt in
         c)
+            [[ "$tool" ]] && fatal "Container engine specified multiple times"
             tool="$OPTARG"
             ;;
         i)
+            [[ "$image" ]] && fatal "Build image specified multiple times"
             image="$OPTARG"
             ;;
         o)
+            [[ "$outdir" ]] && fatal "Destination directory specified multiple times"
             outdir="$OPTARG"
             ;;
         p)
+            [[ "$profiles" ]] && fatal "Build profiles specified multiple times"
             profiles="$OPTARG"
             ;;
         d)
+            [[ "$depdir" ]] && fatal "Dependency directory specified multiple times"
             depdir="$OPTARG"
             ;;
         t)
+            [[ "$reset_timestamps" ]] && fatal "Timestamp reset option specified multiple times"
             reset_timestamps=1
             ;;
         B)
+            [[ "$run_blhc" ]] && fatal "blhc option specified multiple times"
             run_blhc=1
             ;;
         C)
+            [[ "$use_ccache" ]] && fatal "ccache option specified multiple times"
             use_ccache=1
             ;;
         L)
+            [[ "$run_lintian" ]] && fatal "Lintian option specified multiple times"
             run_lintian=1
             ;;
         h)
