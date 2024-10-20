@@ -4,8 +4,9 @@ RUN sed -i -- 's/Types: deb/Types: deb deb-src/g' /etc/apt/sources.list.d/debian
 RUN echo 'man-db man-db/auto-update boolean false' | debconf-set-selections
 RUN set -ex \
     && apt-get update \
-    && apt-get upgrade -y --no-install-recommends \
-    && apt-get install -y --no-install-recommends \
+    && apt-get upgrade -y --no-install-recommends --purge \
+    && apt-get dist-upgrade -y --no-install-recommends --purge \
+    && apt-get install -y --no-install-recommends --purge \
     build-essential \
     cdbs \
     devscripts \
