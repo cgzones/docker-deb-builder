@@ -48,7 +48,7 @@ apt-get autoclean
 #   apt-get to install those afterwards
 if [ -d "${CDEBB_DIR}/dependencies" ]; then
     log "Installing extra dependencies"
-    dpkg -i "${CDEBB_DIR}/dependencies"/*.deb
+    dpkg -i "${CDEBB_DIR}/dependencies"/*.deb || true
     apt-get -f install -y --no-install-recommends
 fi
 
