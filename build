@@ -154,7 +154,7 @@ fi
 tool_args+="--volume $(abspath "$srcdir"):${CDEBB_DIR}/source-ro:ro "
 tool_args+="--volume $(abspath "$outdir"):${CDEBB_DIR}/output "
 tool_args+="--volume $(abspath "$PROG_DIR")/build-helper.sh:${CDEBB_DIR}/build-helper.sh:ro "
-tool_args+="--mount type=tmpfs,tmpfs-size=4G,destination=/tmp "
+tool_args+="--mount type=tmpfs,destination=/tmp "
 
 # Pass current UID and GID to container, so that it can change the
 # ownership of output files which are otherwise written to outdir as
