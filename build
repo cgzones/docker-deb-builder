@@ -129,6 +129,12 @@ if [[ ! "$tool" ]]; then
         elif distrobox-host-exec docker --version >/dev/null 2>&1; then
             tool='distrobox-host-exec docker'
         fi
+    elif command -v flatpak-spawn >/dev/null 2>&1; then
+        if flatpak-spawn --host podman --version >/dev/null 2>&1; then
+            tool='flatpak-spawn --host podman'
+        elif flatpak-spawn --host docker --version >/dev/null 2>&1; then
+            tool='flatpak-spawn --host docker'
+        fi
     fi
 fi
 
